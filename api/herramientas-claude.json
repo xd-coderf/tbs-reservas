@@ -1,0 +1,58 @@
+{
+  "_nota": "Herramientas que el asistente de WhatsApp (Claude, modelo claude-opus-5-5) podrá usar. Cada una se implementa en el servidor llamando a las funciones de core/reservas.js, para que el bot aplique las mismas reglas que la PWA.",
+  "tools": [
+    {
+      "name": "listar_planes",
+      "description": "Devuelve los planes de TBS por categoría (catering/buffet, menús servidos, parrilla en vivo, eventos sociales, agasajos navideños) con precio por persona en USD, mínimo y máximo de personas, duración sugerida y adicionales (por ejemplo gaseosa ilimitada +$2 p/p). Úsela antes de ofrecer, cotizar o registrar un plan; no invente precios.",
+      "strict": true,
+      "input_schema": { "type": "object", "properties": {}, "required": [], "additionalProperties": false }
+    },
+    {
+      "name": "consultar_disponibilidad",
+      "description": "Devuelve los horarios de inicio libres para una fecha y duración, respetando el margen recomendado de 1 h entre reservas. Úsela siempre antes de proponer o confirmar un horario al cliente.",
+      "strict": true,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "fecha": { "type": "string", "description": "Fecha en formato YYYY-MM-DD" },
+          "duracion_min": { "type": "integer", "description": "Duración estimada en minutos (use la del plan si el cliente no indica otra)" }
+        },
+        "required": ["fecha", "duracion_min"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "crear_reserva",
+      "description": "Registra una reserva en estado 'pendiente' para que el encargado la confirme en la PWA. Solo úsela cuando el cliente haya indicado plan, número de personas, nombre, fecha y horario.",
+      "strict": true,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "plan_id": { "type": "string" },
+          "personas": { "type": "integer" },
+          "cliente": { "type": "string", "description": "Nombre del cliente" },
+          "telefono": { "type": "string", "description": "Número de WhatsApp del cliente (lo aporta el servidor)" },
+          "fecha": { "type": "string", "description": "YYYY-MM-DD" },
+          "hora": { "type": "string", "description": "HH:MM, 24 h" },
+          "duracion_min": { "type": "integer" },
+          "notas": { "type": "string" },
+          "lugar": { "type": "string", "description": "Dirección o zona del evento; el transporte está incluido solo en Salinas y La Libertad céntrico" },
+          "adicionales": { "type": "array", "items": { "type": "string" }, "description": "ids de adicionales del plan elegidos por el cliente" }
+        },
+        "required": ["plan_id", "personas", "cliente", "telefono", "fecha", "hora", "duracion_min", "notas", "lugar", "adicionales"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "consultar_reserva_cliente",
+      "description": "Devuelve las reservas futuras asociadas al número de WhatsApp del cliente, para responder dudas o pedidos de cambio.",
+      "strict": true,
+      "input_schema": {
+        "type": "object",
+        "properties": { "telefono": { "type": "string" } },
+        "required": ["telefono"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

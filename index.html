@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TBS Reservas</title>
+  <meta name="description" content="Agenda de reservas de TBS Smoked &amp; Grill">
+  <meta name="theme-color" content="#09111E">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="barra">
+    <div class="marca">
+      <span class="marca-tbs">TBS</span>
+      <span class="marca-sub">Reservas</span>
+    </div>
+    <div class="acciones">
+      <button class="btn-icono" id="btnConfig" title="Planes y horario" aria-label="Planes y horario">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
+      <button class="btn-oro" id="btnNueva">+ Nueva reserva</button>
+    </div>
+  </header>
+
+  <nav class="controles">
+    <div class="nav-fecha">
+      <button class="btn-sec" id="btnPrev" aria-label="Anterior">‹</button>
+      <button class="btn-sec" id="btnHoy">Hoy</button>
+      <button class="btn-sec" id="btnSig" aria-label="Siguiente">›</button>
+      <h1 id="titulo"></h1>
+    </div>
+    <div class="vistas" role="tablist">
+      <button data-vista="dia" role="tab">Día</button>
+      <button data-vista="semana" role="tab">Semana</button>
+      <button data-vista="mes" role="tab">Mes</button>
+    </div>
+  </nav>
+
+  <div class="leyenda" id="leyenda"></div>
+
+  <main id="calendario" class="calendario"></main>
+
+  <!-- Formulario de reserva -->
+  <dialog id="dlgReserva" class="dialogo">
+    <form id="formReserva" method="dialog" novalidate>
+      <header class="dlg-cab">
+        <h2 id="dlgTitulo">Nueva reserva</h2>
+        <button type="button" class="btn-cerrar" data-cerrar aria-label="Cerrar">×</button>
+      </header>
+      <div class="campos">
+        <label class="campo ancho">Plan
+          <select name="planId" required></select>
+        </label>
+        <label class="campo">Personas
+          <input name="personas" type="number" min="1" step="1" inputmode="numeric" required>
+        </label>
+        <label class="campo">Nombre del cliente
+          <input name="cliente" type="text" autocomplete="off" required>
+        </label>
+        <label class="campo">Fecha
+          <input name="fecha" type="date" required>
+        </label>
+        <label class="campo">Horario
+          <input name="hora" type="time" step="900" required>
+        </label>
+        <label class="campo">Duración estimada
+          <select name="duracionMin" required></select>
+        </label>
+        <label class="campo"><span>Teléfono / WhatsApp <span class="opc">(opcional)</span></span>
+          <input name="telefono" type="tel" autocomplete="off">
+        </label>
+        <label class="campo ancho"><span>Lugar / zona <span class="opc">(opcional · transporte incluido en Salinas y La Libertad céntrico)</span></span>
+          <input name="lugar" type="text" autocomplete="off" placeholder="En el local, Salinas, La Libertad…">
+        </label>
+        <div class="campo ancho" id="campoAdicionales" hidden></div>
+        <label class="campo ancho"><span>Notas <span class="opc">(opcional)</span></span>
+          <textarea name="notas" rows="2"></textarea>
+        </label>
+        <label class="campo" id="campoEstado" hidden>Estado
+          <select name="estado">
+            <option value="confirmada">Confirmada</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </label>
+      </div>
+      <div id="resumen" class="resumen" aria-live="polite"></div>
+      <div id="avisos" class="avisos" aria-live="polite"></div>
+      <div id="errores" class="errores" aria-live="assertive"></div>
+      <footer class="dlg-pie">
+        <button type="button" class="btn-peligro" id="btnEliminar" hidden>Eliminar</button>
+        <span class="espacio"></span>
+        <button type="button" class="btn-sec" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn-oro" id="btnGuardar">Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Configuración -->
+  <dialog id="dlgConfig" class="dialogo">
+    <form id="formConfig" method="dialog">
+      <header class="dlg-cab">
+        <h2>Planes y horario</h2>
+        <button type="button" class="btn-cerrar" data-cerrar aria-label="Cerrar">×</button>
+      </header>
+      <h3 class="sub">Planes</h3>
+      <p class="ayuda">Color en el calendario · nombre · categoría · precio por persona (USD) · mínimo y máximo de personas · duración sugerida.</p>
+      <div id="listaPlanes" class="lista-planes"></div>
+      <button type="button" class="btn-sec" id="btnAgregarPlan">+ Agregar plan</button>
+      <h3 class="sub">Horario de atención</h3>
+      <div class="campos">
+        <label class="campo">Apertura <input name="apertura" type="time" step="900"></label>
+        <label class="campo">Cierre <input name="cierre" type="time" step="900"></label>
+        <label class="campo">Margen recomendado (min) <input name="margenMin" type="number" min="0" step="15"></label>
+        <label class="campo">Anticipo (%) <input name="anticipoPct" type="number" min="0" max="100" step="5"></label>
+        <label class="campo">Pago total si faltan menos de (días) <input name="diasPagoTotal" type="number" min="0" step="1"></label>
+      </div>
+      <h3 class="sub">Respaldo</h3>
+      <div class="fila-btns">
+        <button type="button" class="btn-sec" id="btnExportar">Exportar datos</button>
+        <label class="btn-sec btn-archivo">Importar datos<input type="file" id="inpImportar" accept="application/json" hidden></label>
+      </div>
+      <footer class="dlg-pie">
+        <span class="espacio"></span>
+        <button type="button" class="btn-sec" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn-oro">Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

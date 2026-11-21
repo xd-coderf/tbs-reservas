@@ -1,0 +1,133 @@
+openapi: 3.1.0
+info:
+  title: TBS Reservas API
+  version: 0.1.0
+  description: >
+    API del servidor de reservas de TBS. La usarán la PWA (core/almacen.js → AlmacenRemoto)
+    y el asistente de WhatsApp, para que ambos trabajen sobre la misma agenda.
+    Las reglas de negocio viven en core/reservas.js y se reutilizan en el servidor.
+servers:
+  - url: https://api.ejemplo-tbs.com/v1
+security:
+  - bearer: []
+paths:
+  /reservas:
+    get:
+      summary: Listar reservas
+      parameters:
+        - { name: desde, in: query, schema: { type: string, format: date } }
+        - { name: hasta, in: query, schema: { type: string, format: date } }
+        - { name: telefono, in: query, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Reserva' } } } } }
+    post:
+      summary: Crear reserva (devuelve avisos de margen si los hay)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReservaEntrada' } } } }
+      responses:
+        '201': { description: Creada, content: { application/json: { schema: { $ref: '#/components/schemas/ResultadoReserva' } } } }
+        '422': { description: Datos inválidos, content: { application/json: { schema: { $ref: '#/components/schemas/Errores' } } } }
+  /reservas/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get: { summary: Obtener reserva, responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Reserva' } } } } } }
+    put:
+      summary: Crear o reemplazar reserva
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Reserva' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Reserva' } } } } }
+    delete: { summary: Eliminar reserva, responses: { '204': { description: Eliminada } } }
+  /disponibilidad:
+    get:
+      summary: Horarios libres con el margen recomendado
+      parameters:
+        - { name: fecha, in: query, required: true, schema: { type: string, format: date } }
+        - { name: duracionMin, in: query, required: true, schema: { type: integer, minimum: 15 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { fecha: { type: string }, horarios: { type: array, items: { type: string, example: '19:30' } } } } } } }
+  /config:
+    get: { summary: Planes y horario, responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Config' } } } } } }
+    put:
+      summary: Guardar planes y horario
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Config' } } } }
+      responses: { '200': { description: OK } }
+  /webhooks/whatsapp:
+    get:
+      summary: Verificación del webhook (WhatsApp Cloud API)
+      security: []
+      parameters:
+        - { name: hub.mode, in: query, schema: { type: string } }
+        - { name: hub.verify_token, in: query, schema: { type: string } }
+        - { name: hub.challenge, in: query, schema: { type: string } }
+      responses: { '200': { description: Devuelve hub.challenge } }
+    post:
+      summary: Mensajes entrantes de clientes
+      description: Valida la firma X-Hub-Signature-256, pasa el mensaje al asistente y responde por WhatsApp.
+      security: []
+      responses: { '200': { description: Recibido } }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+  schemas:
+    Plan:
+      type: object
+      required: [id, nombre, color, duracionMin]
+      properties:
+        id: { type: string }
+        nombre: { type: string }
+        categoria: { type: string, example: 'Parrilla en vivo' }
+        color: { type: string, example: '#C9A227' }
+        duracionMin: { type: integer }
+        precio: { type: [number, 'null'], description: USD por persona }
+        minPersonas: { type: integer }
+        maxPersonas: { type: integer }
+        adicionales:
+          type: array
+          items: { type: object, properties: { id: { type: string }, nombre: { type: string }, precio: { type: number } } }
+    Config:
+      type: object
+      properties:
+        planes: { type: array, items: { $ref: '#/components/schemas/Plan' } }
+        apertura: { type: string, example: '12:00' }
+        cierre: { type: string, example: '23:00' }
+        margenMin: { type: integer, example: 60 }
+        anticipoPct: { type: integer, example: 25 }
+        diasPagoTotal: { type: integer, example: 7 }
+    ReservaEntrada:
+      type: object
+      required: [planId, personas, cliente, fecha, hora, duracionMin]
+      properties:
+        planId: { type: string }
+        personas: { type: integer, minimum: 1 }
+        cliente: { type: string }
+        telefono: { type: string }
+        fecha: { type: string, format: date }
+        hora: { type: string, pattern: '^\d{2}:\d{2}$' }
+        duracionMin: { type: integer, minimum: 15 }
+        notas: { type: string }
+        lugar: { type: string }
+        adicionales: { type: array, items: { type: string } }
+        estado: { type: string, enum: [confirmada, pendiente, cancelada] }
+        origen: { type: string, enum: [manual, whatsapp, api] }
+    Reserva:
+      allOf:
+        - $ref: '#/components/schemas/ReservaEntrada'
+        - type: object
+          required: [id, creadoEn, actualizadoEn]
+          properties:
+            id: { type: string }
+            creadoEn: { type: string, format: date-time }
+            actualizadoEn: { type: string, format: date-time }
+    Aviso:
+      type: object
+      properties:
+        tipo: { type: string, enum: [solapa, margen] }
+        minutos: { type: integer }
+        reservaId: { type: string }
+        mensaje: { type: string }
+    ResultadoReserva:
+      type: object
+      properties:
+        reserva: { $ref: '#/components/schemas/Reserva' }
+        avisos: { type: array, items: { $ref: '#/components/schemas/Aviso' } }
+    Errores:
+      type: object
+      properties:
+        errores: { type: array, items: { type: string } }
